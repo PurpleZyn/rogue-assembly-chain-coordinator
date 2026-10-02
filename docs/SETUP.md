@@ -1,175 +1,69 @@
-# Setup Guide
+# Setup and Testing Guide — v0.2.0
 
-This takes the Rogue Assembly Chain Coordinator from GitHub to a working shared faction queue.
+There is no backend to deploy in v0.2.0. Only the chain watcher installs the userscript.
 
-## 1. Requirements
-
-You need:
-
-- This GitHub repository.
-- A Cloudflare account.
-- Node.js installed locally, or a GitHub Codespace.
-- Wrangler, installed through this project's npm dependencies.
-
-## 2. Install dependencies
-
-From the repository root:
-
-```bash
-npm install
-```
-
-Then sign in to Cloudflare:
-
-```bash
-npx wrangler login
-```
-
-## 3. Create the D1 database
-
-Run:
-
-```bash
-npx wrangler d1 create rogue-assembly-chain
-```
-
-Cloudflare will return a database ID.
-
-Copy the example configuration:
-
-```bash
-cp wrangler.toml.example wrangler.toml
-```
-
-Open `wrangler.toml` and replace:
-
-```text
-REPLACE_WITH_YOUR_D1_DATABASE_ID
-```
-
-with the database ID Cloudflare returned.
-
-The real `wrangler.toml` is ignored by Git so your deployment-specific configuration does not need to be committed.
-
-## 4. Initialize the database
-
-Run:
-
-```bash
-npm run db:init
-```
-
-This creates the shared queue, watcher slots, application state, and audit log.
-
-## 5. Create the session signing secret
-
-Generate a strong random secret. For example:
-
-```bash
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-Then run:
-
-```bash
-npx wrangler secret put SESSION_SECRET
-```
-
-Paste the generated value when Wrangler asks for it.
-
-Do not commit this secret to GitHub.
-
-## 6. Deploy the Worker
-
-Run:
-
-```bash
-npm run deploy
-```
-
-Wrangler will return a URL similar to:
-
-```text
-https://rogue-assembly-chain-api.YOUR-SUBDOMAIN.workers.dev
-```
-
-Test:
-
-```text
-https://YOUR-WORKER-URL/health
-```
-
-You should receive JSON with `"ok": true`.
-
-## 7. Connect the userscript to the Worker
+## Install in Tampermonkey
 
 Open:
 
-```text
-userscript/rogue-assembly-chain.user.js
-```
+`https://raw.githubusercontent.com/PurpleZyn/rogue-assembly-chain-coordinator/main/userscript/rogue-assembly-chain.user.js`
 
-Find:
+Tampermonkey should offer to install **Rogue Assembly Chain Watcher**.
 
-```js
-const BACKEND_URL = "https://YOUR-WORKER.workers.dev";
-```
+If it does not, create a new Tampermonkey script, replace its contents with the raw GitHub file, and save.
 
-Replace it with the actual Worker URL.
+## Optional API key
 
-Commit that change to `main`.
+The script does not need an API key for the local rotation itself.
 
-## 8. Tampermonkey installation
+A Torn public-access API key can be entered under **⚙ Settings** if you want the watcher panel to display the current faction chain count and timeout.
 
-Faction members can install from:
+## Rotation behavior
 
-```text
-https://raw.githubusercontent.com/PurpleZyn/rogue-assembly-chain-coordinator/main/userscript/rogue-assembly-chain.user.js
-```
+The rotation is persistent and round-robin:
 
-The userscript uses the same GitHub file for its update URL, so future version bumps can be distributed through the repository.
+`A → B → C → D → A → B → ...`
 
-Desktop users enter a Torn public-access API key in the script's settings panel. The key is stored locally and is sent to the Worker only during authentication.
+A member types `!hit` once to join. They remain in the rotation after every hit until they type `!cancel` or the watcher removes them manually.
 
-## 9. Torn PDA installation
+When the watcher clicks **Hit Complete + Next**, the current hitter moves to the back automatically.
 
-Use the same raw GitHub userscript URL in Torn PDA's custom userscript feature.
+## First test
 
-The script contains the Torn PDA API-key placeholder:
+Start with 2–3 people before using it for a real chain.
 
-```text
-###PDA-APIKEY###
-```
+1. Open Torn on the watcher account with the userscript enabled.
+2. Open the faction chat and keep it visible.
+3. Have Player A type `!hit`.
+4. Have Player B type `!hit`.
+5. Click **Scan Faction Chat**.
+6. Confirm A and B appear in the rotation in chat order.
+7. Click **Call Next**.
+8. Confirm the script fills the faction chat input with a call for A and B on deck.
+9. Press Enter manually to send the message.
+10. Click **Hit Complete + Next** after A makes the hit.
+11. Confirm the rotation changes from `A → B` to `B → A` and a message for B is prepared.
+12. Have A type `!cancel`.
+13. Click **Scan Faction Chat** again.
+14. Confirm A is removed while B remains.
 
-so Torn PDA users can use the key already configured in the app.
+## If Scan Faction Chat does not recognize commands
 
-## 10. First multi-user test
+The script intentionally does not silently guess a sender.
 
-Before faction-wide distribution:
+If you can visibly see a `!hit` or `!cancel` in faction chat but the panel says it found no command or could not identify the sender, take a screenshot that includes:
 
-1. Player A opens Torn and takes the Primary Watcher role.
-2. Player B clicks **Request Hit**.
-3. Confirm both devices show Player B in the shared queue.
-4. Player A clicks **Call Next**.
-5. Confirm Player B sees **YOU'RE UP**.
-6. Player B manually performs their Torn attack.
-7. Player B clicks **Hit Done**.
-8. Confirm the request disappears.
-9. Test the Backup Watcher role.
-10. Test Skip Current and Reset Queue.
+- the open faction chat,
+- the command message,
+- the sender name,
+- and the watcher panel result.
 
-## Current configuration
+That will let us tune the Torn chat selector for the current chat markup.
 
-- Faction: Rogue Assembly
-- Faction ID: `54651`
-- Session lifetime: 24 hours
-- Watcher stale timeout: 180 seconds
-- Queue polling: adaptive while Torn is visible
-- Chain status: Torn official API
-- Shared queue state: Cloudflare Worker + D1
+## Chat messages are not auto-sent
 
-## Privacy and gameplay boundaries
+Buttons such as **Call Next** and **Hit Complete + Next** only prepare/fill the faction-chat message. The watcher must review the message and press Enter manually.
 
-The Worker verifies the player's Torn identity and faction membership using the supplied public-access API key but does not write that API key to D1.
+## Local storage
 
-The script coordinates faction members only. It does not click attack, submit attacks, or otherwise perform Torn gameplay actions automatically.
+The rotation, current-call state, and already-processed visible commands are stored locally in the userscript storage on the watcher device. Refreshing Torn should not wipe the active rotation.
