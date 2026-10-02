@@ -1,64 +1,56 @@
-# Rogue Assembly Chain Coordinator
+# Rogue Assembly Chain Watcher
 
-A cross-platform Torn userscript for coordinating Rogue Assembly faction chains without automating gameplay.
+A local Torn userscript for the person actively running a Rogue Assembly chain.
 
-The script is designed to run in both **Tampermonkey** on desktop and **Torn PDA** on mobile. It provides a shared chain-watcher panel and a live hit-request queue so faction members can request a turn, see their position, and know when they have been called.
+**v0.2.0 removes the shared backend entirely.** There is no Cloudflare Worker, no shared database, and faction members do not need to install anything.
 
-## What v0.1 does
+The watcher keeps one persistent local rotation and manually scans visible faction chat for simple commands:
 
-- Authenticates a player with a Torn **public-access API key**.
-- Verifies that the player belongs to **Rogue Assembly [54651]**.
-- Does **not** store Torn API keys on the backend.
-- Creates a short-lived signed session token after verification.
-- Lets a member claim the **Primary Watcher** or **Backup Watcher** role.
-- Lets members **Request Hit**, see their queue position, cancel a request, and mark a called hit complete.
-- Lets watchers **Call Next**, **Skip Current**, and **Reset Queue** for a new chain session.
-- Shows the current Torn faction chain count and timeout using Torn's official API.
-- Uses normal HTTP polling so the same userscript can work in Torn PDA as well as Tampermonkey.
-- Pauses aggressive refreshing while the Torn page is hidden.
-- Never clicks attack, performs attacks, or submits Torn gameplay actions automatically.
+- `!hit` — join the rotation. A member only needs to do this once; after each completed hit they move to the back automatically and stay in the rotation.
+- `!cancel` — leave the rotation.
 
-## Project layout
+## Watcher workflow
 
-```text
-userscript/rogue-assembly-chain.user.js   Torn/Torn PDA userscript
-worker/src/index.js                       Cloudflare Worker REST API
-migrations/001_init.sql                   D1 database schema
-wrangler.toml.example                     Cloudflare configuration template
-package.json                              Wrangler/dev scripts
-docs/SETUP.md                             Deployment and installation guide
-```
+1. Open Torn and keep faction chat visible.
+2. Members type `!hit` when they want into the ongoing rotation.
+3. Click **Scan Faction Chat** in the watcher panel.
+4. The script adds/removes members from the local rotation.
+5. Click **Call Next**. The script prepares the call message in faction chat.
+6. The watcher reviews it and presses Enter manually.
+7. When that member finishes, click **Hit Complete + Next**.
+8. The completed hitter moves to the back and the next member becomes current.
+9. Repeat until members use `!cancel` or the watcher removes them.
 
-## Architecture
+The userscript never sends chat automatically and never performs attacks.
 
-```text
-                    Torn official API
-                         /       \
-                        /         \
-               identity/faction   chain status
-                      |               |
-                      v               v
-Tampermonkey / Torn PDA userscript -------------------+
-          |                                            |
-          | HTTPS REST                                 |
-          v                                            |
-Cloudflare Worker <----> Cloudflare D1                 |
-  authentication       shared queue/watchers           |
-          |                                            |
-          +--- verifies key with Torn API -------------+
-```
+## Features
 
-GitHub distributes the userscript and keeps updates in one place. Cloudflare Worker + D1 provide the shared state that all faction members see.
+- Persistent round-robin rotation stored locally in the watcher browser.
+- Manual **Scan Faction Chat** command processing.
+- `!hit` joins once and remains in rotation across repeated hits.
+- `!cancel` removes a member.
+- **Call Next**, **Hit Complete + Next**, and **Skip / Rotate** controls.
+- Manual add/remove fallback.
+- Fills the faction chat input with call/rotation messages when Torn's chat DOM can be identified; otherwise copies the message to the clipboard.
+- Optional Torn public API key for chain count and timeout.
+- Tampermonkey-compatible and designed to remain Torn PDA-friendly.
+- No backend hosting requirement.
 
-## Safety / Torn scripting compliance
+## Install
 
-The tool intentionally does not automate gameplay. Queue actions only coordinate faction members. A player still manually navigates Torn and manually performs every attack.
+Open the raw userscript URL with Tampermonkey:
 
-Torn data used by the script comes from Torn's official API. The shared queue is data created by this tool itself.
+`https://raw.githubusercontent.com/PurpleZyn/rogue-assembly-chain-coordinator/main/userscript/rogue-assembly-chain.user.js`
 
-## Setup
+The script includes `@updateURL` and `@downloadURL` metadata pointing to the same GitHub file.
+
+## First test
 
 See [`docs/SETUP.md`](docs/SETUP.md).
+
+## Important testing note
+
+Torn's chat markup can change. The first v0.2 test intentionally reports when it can see a `!hit`/`!cancel` command but cannot identify the sender. If that happens, capture a screenshot of the open faction chat and the script panel; the selector can then be tuned without changing the rotation design.
 
 ## License
 
