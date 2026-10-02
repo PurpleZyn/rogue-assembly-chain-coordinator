@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rogue Assembly Chain Watcher
 // @namespace    rogueassembly.chain
-// @version      0.2.1
+// @version      0.2.2
 // @description  Local Rogue Assembly chain rotation. Scan visible faction chat for !hit / !cancel, cycle hitters, and prepare chat messages without sending them.
 // @author       Rogue Assembly
 // @license      GPL-3.0-only
@@ -21,7 +21,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.2.1";
+  const VERSION = "0.2.2";
   const STORE = "ra-chain:v2:";
   const PDA_KEY_PLACEHOLDER = "###PDA-APIKEY###";
   const CHAIN_URL = "https://api.torn.com/v2/faction/chain";
@@ -361,32 +361,32 @@
   function renderChain() {
     if (!chainEl) return;
     if (!state.chain) {
-      chainEl.innerHTML = `<div class="card"><small>FACTION CHAIN</small><div class="muted">${esc(state.chainError || "Waiting for Torn API…")}</div></div>`;
+      chainEl.innerHTML = `<div class="racw-card"><small>FACTION CHAIN</small><div class="racw-muted">${esc(state.chainError || "Waiting for Torn API…")}</div></div>`;
       return;
     }
     const t = Number(state.chain.timeout || 0);
-    chainEl.innerHTML = `<div class="card chain"><div><small>FACTION CHAIN</small><strong>${fmt(state.chain.current)} <em>/ ${fmt(state.chain.max)}</em></strong></div><div class="timer ${t && t <= 90 ? "dangerText" : t && t <= 180 ? "warnText" : ""}">${t ? fmtTime(t) : "—"}<small>timeout</small></div></div>`;
+    chainEl.innerHTML = `<div class="racw-card racw-chain"><div><small>FACTION CHAIN</small><strong>${fmt(state.chain.current)} <em>/ ${fmt(state.chain.max)}</em></strong></div><div class="racw-timer ${t && t <= 90 ? "racw-dangerText" : t && t <= 180 ? "racw-warnText" : ""}">${t ? fmtTime(t) : "—"}<small>timeout</small></div></div>`;
   }
 
   function renderCurrent() {
     if (!state.rotation.length) {
-      currentEl.innerHTML = '<div class="card"><small>ROTATION</small><div class="empty">Nobody is in the rotation yet.</div></div>';
+      currentEl.innerHTML = '<div class="racw-card"><small>ROTATION</small><div class="racw-empty">Nobody is in the rotation yet.</div></div>';
       return;
     }
     const a = state.rotation[0], b = state.rotation[1];
-    currentEl.innerHTML = `<div class="card ${state.called ? "calledCard" : ""}"><div class="current"><div><small>${state.called ? "UP NOW" : "NEXT UP"}</small><b>${esc(a.name)}</b></div><div><small>ON DECK</small><b>${esc(b?.name || "—")}</b></div></div></div>`;
+    currentEl.innerHTML = `<div class="racw-card ${state.called ? "racw-calledCard" : ""}"><div class="racw-current"><div><small>${state.called ? "UP NOW" : "NEXT UP"}</small><b>${esc(a.name)}</b></div><div><small>ON DECK</small><b>${esc(b?.name || "—")}</b></div></div></div>`;
   }
 
   function renderControls() {
-    controlsEl.innerHTML = `<div class="card"><div class="buttons"><button class="primary" data-act="scan">Scan Faction Chat</button><button data-act="add">+ Add Member</button></div><div class="buttons main"><button class="primary" data-act="call" ${!state.rotation.length ? "disabled" : ""}>${state.called ? "Re-fill Call" : "Call Next"}</button><button class="success" data-act="complete" ${!state.rotation.length ? "disabled" : ""}>Hit Complete + Next</button><button data-act="skip" ${!state.rotation.length ? "disabled" : ""}>Skip / Rotate</button></div><div class="buttons"><button data-act="rotation" ${!state.rotation.length ? "disabled" : ""}>Fill Rotation Message</button><button class="danger" data-act="clear" ${!state.rotation.length ? "disabled" : ""}>Clear Rotation</button></div></div>`;
+    controlsEl.innerHTML = `<div class="racw-card"><div class="racw-buttons"><button class="racw-primary" data-act="scan">Scan Faction Chat</button><button data-act="add">+ Add Member</button></div><div class="racw-buttons racw-main"><button class="racw-primary" data-act="call" ${!state.rotation.length ? "disabled" : ""}>${state.called ? "Re-fill Call" : "Call Next"}</button><button class="racw-success" data-act="complete" ${!state.rotation.length ? "disabled" : ""}>Hit Complete + Next</button><button data-act="skip" ${!state.rotation.length ? "disabled" : ""}>Skip / Rotate</button></div><div class="racw-buttons"><button data-act="rotation" ${!state.rotation.length ? "disabled" : ""}>Fill Rotation Message</button><button class="racw-danger" data-act="clear" ${!state.rotation.length ? "disabled" : ""}>Clear Rotation</button></div></div>`;
   }
 
   function renderRotation() {
     if (!state.rotation.length) { rotationEl.innerHTML = ""; return; }
-    let html = `<div class="card"><div class="row"><small>PERSISTENT ROTATION</small><b>${state.rotation.length}</b></div>`;
+    let html = `<div class="racw-card"><div class="racw-row"><small>PERSISTENT ROTATION</small><b>${state.rotation.length}</b></div>`;
     state.rotation.forEach((m, i) => {
       const tag = i === 0 ? (state.called ? "UP" : "NEXT") : i === 1 ? "DECK" : `#${i + 1}`;
-      html += `<div class="member ${i === 0 ? "first" : ""}"><span>${tag}</span><b>${esc(m.name)}</b><button data-act="remove" data-id="${esc(m.id)}">×</button></div>`;
+      html += `<div class="racw-member ${i === 0 ? "racw-first" : ""}"><span>${tag}</span><b>${esc(m.name)}</b><button data-act="remove" data-id="${esc(m.id)}">×</button></div>`;
     });
     rotationEl.innerHTML = html + "</div>";
   }
@@ -394,7 +394,7 @@
   function renderMessage() {
     if (!state.message) { messageEl.hidden = true; return; }
     messageEl.hidden = false;
-    messageEl.className = `msg ${state.kind}`;
+    messageEl.className = `racw-msg ${state.kind}`;
     messageEl.textContent = state.message;
   }
 
@@ -451,7 +451,7 @@
       panel.style.top = `${r.top}px`;
       panel.style.right = "auto";
       panel.style.bottom = "auto";
-      document.body.classList.add("rac-dragging");
+      document.body.classList.add("racw-dragging");
       if (e.cancelable) e.preventDefault();
     };
 
@@ -471,7 +471,7 @@
     const end = () => {
       if (!dragging) return;
       dragging = false;
-      document.body.classList.remove("rac-dragging");
+      document.body.classList.remove("racw-dragging");
       savePosition();
     };
 
@@ -487,16 +487,16 @@
   function build() {
     panel = document.createElement("section");
     panel.id = "ra-chain-watcher";
-    panel.innerHTML = `<div class="head"><div><b>RA Chain Watcher</b><small>v${VERSION}</small></div><div><button data-act="settings" title="Settings">⚙</button><button data-act="min" title="Minimize">${state.minimized ? "+" : "–"}</button></div></div><div class="body"><div class="chainEl"></div><div class="msg" hidden></div><div class="currentEl"></div><div class="controlsEl"></div><div class="rotationEl"></div><div class="scanEl"></div><div class="settings" hidden><b>Settings</b><div class="note">Optional Torn public API key — only used for chain count/timer.</div><div class="input"><input type="password" maxlength="16" data-key placeholder="16-character API key"><button data-act="save">Save</button></div><div class="buttons settingsButtons"><button data-act="reset-pos">Reset Panel Position</button></div><div class="note">Drag the dark title bar to move this panel. Its position is remembered on this device.</div><div class="note">Only the chain watcher needs this script. Faction members just use !hit and !cancel in faction chat.</div></div></div>`;
+    panel.innerHTML = `<div class="racw-head"><div><b>RA Chain Watcher</b><small>v${VERSION}</small></div><div><button data-act="settings" title="Settings">⚙</button><button data-act="min" title="Minimize">${state.minimized ? "+" : "–"}</button></div></div><div class="racw-body"><div class="racw-chainEl"></div><div class="racw-msg" hidden></div><div class="racw-currentEl"></div><div class="racw-controlsEl"></div><div class="racw-rotationEl"></div><div class="racw-scanEl"></div><div class="racw-settings" hidden><b>Settings</b><div class="racw-note">Optional Torn public API key — only used for chain count/timer.</div><div class="racw-input"><input type="password" maxlength="16" data-key placeholder="16-character API key"><button data-act="save">Save</button></div><div class="racw-buttons racw-settingsButtons"><button data-act="reset-pos">Reset Panel Position</button></div><div class="racw-note">Drag the dark title bar to move this panel. Its position is remembered on this device.</div><div class="racw-note">Only the chain watcher needs this script. Faction members just use !hit and !cancel in faction chat.</div></div></div>`;
     document.body.appendChild(panel);
 
-    chainEl = panel.querySelector(".chainEl");
-    currentEl = panel.querySelector(".currentEl");
-    controlsEl = panel.querySelector(".controlsEl");
-    rotationEl = panel.querySelector(".rotationEl");
-    messageEl = panel.querySelector(".msg");
-    settingsEl = panel.querySelector(".settings");
-    scanEl = panel.querySelector(".scanEl");
+    chainEl = panel.querySelector(".racw-chainEl");
+    currentEl = panel.querySelector(".racw-currentEl");
+    controlsEl = panel.querySelector(".racw-controlsEl");
+    rotationEl = panel.querySelector(".racw-rotationEl");
+    messageEl = panel.querySelector(".racw-msg");
+    settingsEl = panel.querySelector(".racw-settings");
+    scanEl = panel.querySelector(".racw-scanEl");
 
     const input = panel.querySelector("[data-key]");
     if (pdaKey()) { input.disabled = true; input.placeholder = "Using Torn PDA saved key"; }
@@ -505,7 +505,7 @@
     panel.addEventListener("click", click);
     applyMin();
     applySavedPosition();
-    makeDraggable(panel.querySelector(".head"));
+    makeDraggable(panel.querySelector(".racw-head"));
     render();
   }
 
@@ -546,11 +546,11 @@
   }
 
   function applyMin() {
-    if (panel) panel.classList.toggle("minimized", state.minimized);
+    if (panel) panel.classList.toggle("racw-minimized", state.minimized);
   }
 
   function styles() {
-    const css = `#ra-chain-watcher{position:fixed;right:12px;bottom:12px;width:370px;max-height:86vh;z-index:2147483000;background:#17191e;color:#edf0f5;border:1px solid #343943;border-radius:12px;box-shadow:0 12px 36px #0008;font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}#ra-chain-watcher *{box-sizing:border-box}#ra-chain-watcher button{font:inherit;border:1px solid #3b414d;background:#2a2f38;color:#eef1f5;border-radius:7px;padding:5px 9px;cursor:pointer}#ra-chain-watcher button:disabled{opacity:.35;cursor:not-allowed}.head{height:42px;padding:0 9px 0 11px;background:#20232a;border-bottom:1px solid #343943;display:flex;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none}.head>div{display:flex;align-items:center;gap:6px}.head small{opacity:.4;font-size:9px}.head button{width:29px;height:27px;padding:0;cursor:pointer}.rac-dragging,.rac-dragging *{user-select:none!important}.body{padding:8px;overflow-y:auto;max-height:calc(86vh - 42px)}.minimized .body{display:none}.minimized{width:176px!important}.card{background:#20232a;border:1px solid #303641;border-radius:9px;padding:9px;margin-bottom:7px}.card small{font-size:9px;opacity:.52;letter-spacing:.55px}.muted{opacity:.58}.empty{text-align:center;padding:10px 3px 3px;opacity:.48}.row{display:flex;align-items:center;justify-content:space-between}.chain{display:flex;align-items:center;justify-content:space-between}.chain strong{display:block;font-size:20px}.chain em{font-size:11px;opacity:.45;font-style:normal}.timer{text-align:right;font-size:20px;font-weight:800}.timer small{display:block}.warnText{color:#f0c45e}.dangerText{color:#ef7565}.current{display:grid;grid-template-columns:1fr 1fr;gap:7px}.current>div{background:#17191e;border-radius:7px;padding:7px}.current b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.calledCard{border-color:#8b7040;background:#292518}.buttons{display:flex;gap:5px;flex-wrap:wrap}.buttons+.buttons{margin-top:6px}.main button{flex:1 1 auto}.primary{background:#3c5f9d!important}.success{background:#356c45!important}.danger{margin-left:auto;color:#ef9b90!important}.member{display:grid;grid-template-columns:42px 1fr 28px;align-items:center;gap:7px;padding:6px 3px;border-top:1px solid #2e333c}.member span{font-size:9px;font-weight:800;opacity:.5;text-align:right}.member button{width:26px;height:24px;padding:0}.member.first{background:#222b38;border-radius:6px;border-top:0;margin-top:6px}.member.first span{color:#9ec1ff;opacity:1}.msg{padding:7px 9px;border-radius:8px;margin-bottom:7px;border:1px solid}.msg.info{background:#202a38;border-color:#33465d}.msg.good{background:#1e3124;border-color:#315a3a;color:#bde7c5}.msg.warn{background:#352f1c;border-color:#5c4f27;color:#f2d98b}.msg.bad{background:#38231f;border-color:#633a32;color:#efb0a6}.scanEl{text-align:center;opacity:.42;font-size:9px;padding:2px 4px 5px}.settings{border-top:1px solid #343943;padding-top:8px;margin-top:5px}.note{opacity:.48;font-size:9.5px;margin-top:6px}.input{display:flex;gap:5px;margin-top:5px}.input input{flex:1;min-width:0;border:1px solid #3a414c;background:#111318;color:#eef1f5;border-radius:7px;padding:7px}.settingsButtons{margin-top:7px}@media(max-width:520px){#ra-chain-watcher{width:min(370px,calc(100vw - 12px));max-height:72vh}.body{max-height:calc(72vh - 42px)}.minimized{width:170px!important}}`;
+    const css = `#ra-chain-watcher{position:fixed;right:12px;bottom:12px;width:370px;max-height:86vh;z-index:2147483000;background:#17191e;color:#edf0f5;border:1px solid #343943;border-radius:12px;box-shadow:0 12px 36px #0008;font:12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow:hidden}#ra-chain-watcher,#ra-chain-watcher *{box-sizing:border-box}#ra-chain-watcher button{font:inherit;border:1px solid #3b414d;background:#2a2f38;color:#eef1f5;border-radius:7px;padding:5px 9px;cursor:pointer}#ra-chain-watcher button:disabled{opacity:.35;cursor:not-allowed}#ra-chain-watcher .racw-head{height:42px;padding:0 9px 0 11px;background:#20232a;border-bottom:1px solid #343943;display:flex;align-items:center;justify-content:space-between;cursor:move;user-select:none;touch-action:none}#ra-chain-watcher .racw-head>div{display:flex;align-items:center;gap:6px}#ra-chain-watcher .racw-head small{opacity:.4;font-size:9px}#ra-chain-watcher .racw-head button{width:29px;height:27px;padding:0;cursor:pointer}body.racw-dragging,body.racw-dragging *{user-select:none!important}#ra-chain-watcher .racw-body{padding:8px;overflow-y:auto;max-height:calc(86vh - 42px)}#ra-chain-watcher.racw-minimized .racw-body{display:none}#ra-chain-watcher.racw-minimized{width:176px!important}#ra-chain-watcher .racw-card{background:#20232a;border:1px solid #303641;border-radius:9px;padding:9px;margin-bottom:7px}#ra-chain-watcher .racw-card small{font-size:9px;opacity:.52;letter-spacing:.55px}#ra-chain-watcher .racw-muted{opacity:.58}#ra-chain-watcher .racw-empty{text-align:center;padding:10px 3px 3px;opacity:.48}#ra-chain-watcher .racw-row{display:flex;align-items:center;justify-content:space-between}#ra-chain-watcher .racw-chain{display:flex;align-items:center;justify-content:space-between}#ra-chain-watcher .racw-chain strong{display:block;font-size:20px}#ra-chain-watcher .racw-chain em{font-size:11px;opacity:.45;font-style:normal}#ra-chain-watcher .racw-timer{text-align:right;font-size:20px;font-weight:800}#ra-chain-watcher .racw-timer small{display:block}#ra-chain-watcher .racw-warnText{color:#f0c45e}#ra-chain-watcher .racw-dangerText{color:#ef7565}#ra-chain-watcher .racw-current{display:grid;grid-template-columns:1fr 1fr;gap:7px}#ra-chain-watcher .racw-current>div{background:#17191e;border-radius:7px;padding:7px}#ra-chain-watcher .racw-current b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#ra-chain-watcher .racw-calledCard{border-color:#8b7040;background:#292518}#ra-chain-watcher .racw-buttons{display:flex;gap:5px;flex-wrap:wrap}#ra-chain-watcher .racw-buttons+.racw-buttons{margin-top:6px}#ra-chain-watcher .racw-main button{flex:1 1 auto}#ra-chain-watcher .racw-primary{background:#3c5f9d!important}#ra-chain-watcher .racw-success{background:#356c45!important}#ra-chain-watcher .racw-danger{margin-left:auto;color:#ef9b90!important}#ra-chain-watcher .racw-member{display:grid;grid-template-columns:42px 1fr 28px;align-items:center;gap:7px;padding:6px 3px;border-top:1px solid #2e333c}#ra-chain-watcher .racw-member span{font-size:9px;font-weight:800;opacity:.5;text-align:right}#ra-chain-watcher .racw-member button{width:26px;height:24px;padding:0}#ra-chain-watcher .racw-member.racw-first{background:#222b38;border-radius:6px;border-top:0;margin-top:6px}#ra-chain-watcher .racw-member.racw-first span{color:#9ec1ff;opacity:1}#ra-chain-watcher .racw-msg{padding:7px 9px;border-radius:8px;margin-bottom:7px;border:1px solid}#ra-chain-watcher .racw-msg.info{background:#202a38;border-color:#33465d}#ra-chain-watcher .racw-msg.good{background:#1e3124;border-color:#315a3a;color:#bde7c5}#ra-chain-watcher .racw-msg.warn{background:#352f1c;border-color:#5c4f27;color:#f2d98b}#ra-chain-watcher .racw-msg.bad{background:#38231f;border-color:#633a32;color:#efb0a6}#ra-chain-watcher .racw-scanEl{text-align:center;opacity:.42;font-size:9px;padding:2px 4px 5px}#ra-chain-watcher .racw-settings{border-top:1px solid #343943;padding-top:8px;margin-top:5px}#ra-chain-watcher .racw-note{opacity:.48;font-size:9.5px;margin-top:6px}#ra-chain-watcher .racw-input{display:flex;gap:5px;margin-top:5px}#ra-chain-watcher .racw-input input{flex:1;min-width:0;border:1px solid #3a414c;background:#111318;color:#eef1f5;border-radius:7px;padding:7px}#ra-chain-watcher .racw-settingsButtons{margin-top:7px}@media(max-width:520px){#ra-chain-watcher{width:min(370px,calc(100vw - 12px));max-height:72vh}#ra-chain-watcher .racw-body{max-height:calc(72vh - 42px)}#ra-chain-watcher.racw-minimized{width:170px!important}}`;
     if (typeof GM_addStyle === "function") GM_addStyle(css);
     else {
       const s = document.createElement("style");
